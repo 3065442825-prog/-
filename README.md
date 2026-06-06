@@ -20,21 +20,33 @@
 
 ```
 GIS-Project/
-├── frontend/              # 前端层
-│   ├── src/               # Vue 3 组件源码
-│   │   └── components/    # Leaflet 地图组件
-│   ├── public/            # 静态资源
-│   └── package.json       # 前端依赖
-├── backend/               # 后端层
-│   └── pom.xml            # Maven 项目配置
-├── data-processing/       # 数据处理层
-│   ├── scripts/           # 处理脚本
-│   ├── requirements.txt   # Python 依赖
-│   └── .venv/             # 虚拟环境
-├── docker-compose.yml     # PostGIS + pgAdmin 编排
-├── .gitignore             # Git 忽略规则
-├── check_env.bat          # 环境自检脚本
-└── README.md              # 项目说明文档
+│
+├── frontend/                  # 前端层 (Vue 3 + Vite + TypeScript)
+│   ├── src/
+│   │   └── components/        # Leaflet 地图组件
+│   ├── public/
+│   ├── index.html
+│   ├── package.json
+│   ├── vite.config.ts
+│   └── tsconfig.json
+│
+├── backend/                   # 后端层 (Java 21 + Spring Boot + Maven)
+│   ├── src/main/java/com/gis/ # 业务代码
+│   ├── src/main/resources/    # 配置文件
+│   ├── src/test/java/com/gis/ # 单元测试
+│   └── pom.xml                # Maven 项目描述
+│
+├── data-processing/           # 数据处理层 (Python 3.12)
+│   ├── scripts/               # 处理脚本
+│   ├── data/                  # 数据文件
+│   ├── notebooks/             # Jupyter 分析笔记本
+│   └── requirements.txt       # Python 依赖
+│
+├── docker-compose.yml         # PostGIS + pgAdmin 编排
+├── check_env.bat              # 环境自检（CMD）
+├── check_env.ps1              # 环境自检（PowerShell）
+├── .gitignore                 # Git 忽略规则
+└── README.md                  # 项目说明文档
 ```
 
 ## 🚀 快速启动

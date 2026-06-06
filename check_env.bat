@@ -1,95 +1,92 @@
 @echo off
-chcp 65001 >nul
-REM ============================================
-REM  GIS 全栈开发环境 — 一键自检脚本
-REM ============================================
+REM GIS environment check script
 
 setlocal enabledelayedexpansion
 
 set PASS=0
 set FAIL=0
 
-echo.
-echo +=========================================+
-echo ^|    GIS 全栈开发环境 - 版本自检          ^|
-echo +=========================================+
+cls
+echo ============================================
+echo   GIS Environment Check
+echo ============================================
 echo.
 
-REM ========== Node.js ==========
+REM --- Node.js ---
 set VER=
 for /f "tokens=*" %%i in ('node --version 2^>nul') do set VER=%%i
 if defined VER (
-    echo   [OK] Node.js       !VER!
+    echo   [OK] Node.js    !VER!
     set /a PASS+=1
 ) else (
-    echo   [!!] Node.js       未安装
+    echo   [!!] Node.js    not found
     set /a FAIL+=1
 )
 
-REM ========== pnpm ==========
+REM --- pnpm ---
 set VER=
 for /f "tokens=*" %%i in ('pnpm --version 2^>nul') do set VER=%%i
 if defined VER (
-    echo   [OK] pnpm          v!VER!
+    echo   [OK] pnpm       v!VER!
     set /a PASS+=1
 ) else (
-    echo   [!!] pnpm          未安装
+    echo   [!!] pnpm       not found
     set /a FAIL+=1
 )
 
-REM ========== Python ==========
+REM --- Python ---
 set VER=
 for /f "tokens=*" %%i in ('python --version 2^>nul') do set VER=%%i
 if defined VER (
-    echo   [OK] Python        !VER!
+    echo   [OK] Python     !VER!
     set /a PASS+=1
 ) else (
-    echo   [!!] Python        未安装
+    echo   [!!] Python     not found
     set /a FAIL+=1
 )
 
-REM ========== Java ==========
+REM --- Java ---
 set VER=
 for /f "tokens=*" %%i in ('java -version 2^>^&1') do (
     if not defined VER set VER=%%i
 )
 if defined VER (
-    echo   [OK] Java          !VER!
+    echo   [OK] Java       !VER!
     set /a PASS+=1
 ) else (
-    echo   [!!] Java          未安装
+    echo   [!!] Java       not found
     set /a FAIL+=1
 )
 
-REM ========== Git ==========
+REM --- Git ---
 set VER=
 for /f "tokens=*" %%i in ('git --version 2^>nul') do set VER=%%i
 if defined VER (
-    echo   [OK] Git           !VER!
+    echo   [OK] Git        !VER!
     set /a PASS+=1
 ) else (
-    echo   [!!] Git           未安装
+    echo   [!!] Git        not found
     set /a FAIL+=1
 )
 
-REM ========== Docker ==========
+REM --- Docker ---
 set VER=
 for /f "tokens=*" %%i in ('docker --version 2^>nul') do set VER=%%i
 if defined VER (
-    echo   [OK] Docker        !VER!
+    echo   [OK] Docker     !VER!
     set /a PASS+=1
 ) else (
-    echo   [--] Docker        未安装 ^(可选^)
+    echo   [--] Docker     not found (optional)
 )
 
 echo.
-echo +=========================================+
-echo ^|  检查完成: %PASS% 项通过, %FAIL% 项失败
-echo +=========================================+
+echo ============================================
+echo   Result: %PASS% passed, %FAIL% failed
+echo ============================================
 echo.
 
 if %FAIL% gtr 0 (
-    echo   [提示] 请安装标记为 [!!] 的工具，确保路径配置正确
+    echo   Please install tools marked [!!]
     echo.
 )
 
