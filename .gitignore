@@ -1,34 +1,72 @@
-# Node
-node_modules/
-frontend/dist/
-frontend/node_modules/
+# ============================================
+# GIS 全栈项目 .gitignore
+# ============================================
 
-# Python
+# ---------- Node.js / pnpm ----------
+node_modules/
+.pnpm-store/
+frontend/dist/
+frontend/.vite/
+*.tsbuildinfo
+
+# ---------- Python ----------
 data-processing/.venv/
+data-processing/venv/
 __pycache__/
 *.pyc
 *.pyo
 .eggs/
 *.egg-info/
+dist/
+*.whl
+.pytest_cache/
 
-# Java
+# ---------- Java / Maven ----------
 backend/target/
 backend/.idea/
 *.class
 *.jar
 *.war
+*.nar
+*.zip
+*.tar.gz
+*.rar
+hs_err_pid*
+replay_pid*
 
-# IDE
+# ---------- Docker / 容器 ----------
+docker-data/
+pgdata/
+
+# ---------- IDE / 编辑器 ----------
 .vscode/
 .idea/
+*.iml
 *.swp
 *.swo
 *~
-
-# OS
+*.bak
+*.orig
 .DS_Store
 Thumbs.db
 
-# env
+# ---------- 日志 ----------
+*.log
+logs/
+
+# ---------- 环境变量 ----------
 .env
 .env.local
+.env.*.local
+
+# ---------- 操作系统 ----------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------- 其他 ----------
+*.tmp
+*.temp
+*.pid
+*.seed
+.git/*.orig
