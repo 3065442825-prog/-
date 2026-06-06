@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaflet组件 - 代码对比</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background: #f5f5f5; 
+            padding: 40px 20px;
+        }
+        .container { max-width: 1600px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 40px; }
+        header h1 { font-size: 36px; color: #333; margin-bottom: 10px; }
+        header p { color: #666; font-size: 18px; }
+        
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        .code-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .code-header {
+            padding: 20px;
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .basic-header { background: linear-gradient(135deg, #f093fb, #f5576c); }
+        .enhanced-header { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+        
+        .code-body {
+            padding: 20px;
+            background: #1e1e1e;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        pre {
+            margin: 0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #d4d4d4;
+        }
+        
+        .comment { color: #6a9955; }
+        .keyword { color: #569cd6; }
+        .function { color: #dcdcaa; }
+        .string { color: #ce9178; }
+        .type { color: #4ec9b0; }
+        .number { color: #b5cea8; }
+        
+        .features-section {
+            margin-top: 40px;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+        }
+        
+        .features-section h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 28px;
+            color: #333;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .feature-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .feature-card h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        
+        .feature-card p {
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .feature-card code {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🗺️ Leaflet 组件代码对比</h1>
+            <p>精细提示词 vs 粗略提示词生成的 Vue 组件真实差异</p>
+        </header>
+        
+        <div class="comparison-grid">
+            <!-- 粗略版本代码 -->
+            <div class="code-card">
+                <div class="code-header basic-header">
+                    ❌ 粗略版本 - 代码
+                </div>
+                <div class="code-body">
+                    <pre><span class="keyword">import</span> { onMounted } <span class="keyword">from</span> <span class="string">'vue'</span>
+<span class="keyword">import</span> L <span class="keyword">from</span> <span class="string">'leaflet'</span>
+<span class="keyword">import</span> <span class="string">'leaflet/dist/leaflet.css'</span>
+
+<span class="comment">// 问题1：没有类型定义</span>
+<span class="comment">// 问题2：没有 Props 配置</span>
+<span class="comment">// 问题3：没有清理逻辑</span>
+
+onMounted(() => {
+  <span class="comment">// 问题4：使用ID选择器，可能冲突</span>
+  <span class="keyword">const</span> map = L.<span class="function">map</span>(<span class="string">'map-container'</span>)
+  
+  L.<span class="function">tileLayer</span>(<span class="string">'https://...'</span>).<span class="function">addTo</span>(map)
+  
+  <span class="comment">// 问题5：硬编码坐标</span>
+  L.<span class="function">marker</span>([<span class="number">39.9042</span>, <span class="number">116.3974</span>]).<span class="function">addTo</span>(map)
+  
+  <span class="comment">// 问题6：没有保存实例，无法清理</span>
+})</pre>
+                </div>
+            </div>
+            
+            <!-- 精细版本代码 -->
+            <div class="code-card">
+                <div class="code-header enhanced-header">
+                    ✅ 精细版本 - 代码
+                </div>
+                <div class="code-body">
+                    <pre><span class="keyword">import</span> { <span class="type">onMounted</span>, <span class="type">onUnmounted</span>, <span class="type">shallowRef</span>, <span class="type">ref</span>, <span class="type">withDefaults</span> } <span class="keyword">from</span> <span class="string">'vue'</span>
+<span class="keyword">import</span> L <span class="keyword">from</span> <span class="string">'leaflet'</span>
+<span class="keyword">import</span> <span class="string">'leaflet/dist/leaflet.css'</span>
+
+<span class="comment">// ✅ 优势1：完整类型定义</span>
+<span class="keyword">interface</span> <span class="type">Props</span> {
+  center?: [<span class="type">number</span>, <span class="type">number</span>]
+  zoom?: <span class="type">number</span>
+  tileUrl?: <span class="type">string</span>
+}
+
+<span class="keyword">const</span> props = <span class="function">withDefaults</span>(<span class="function">defineProps</span>&lt;<span class="type">Props</span>&gt;(), {
+  <span class="comment">// ✅ 优势2：可配置默认值</span>
+  center: () => [<span class="number">39.9042</span>, <span class="number">116.3974</span>] <span class="keyword">as</span> [<span class="type">number</span>, <span class="type">number</span>],
+  zoom: <span class="number">13</span>,
+  tileUrl: <span class="string">'https://...'</span>
+})
+
+<span class="keyword">const</span> mapContainer = <span class="function">ref</span>&lt;<span class="type">HTMLElement</span> | <span class="keyword">null</span>&gt;(<span class="keyword">null</span>)
+<span class="keyword">const</span> mapInstance = <span class="function">shallowRef</span>&lt;<span class="type">L.Map</span> | <span class="keyword">null</span>&gt;(<span class="keyword">null</span>)
+
+<span class="type">onMounted</span>(() => {
+  <span class="comment">// ✅ 优势3：使用 ref 避免ID冲突</span>
+  <span class="keyword">if</span> (!mapContainer.value) <span class="keyword">return</span>
+  
+  <span class="keyword">const</span> map = L.<span class="function">map</span>(mapContainer.value, {
+    center: props.center,
+    zoom: props.zoom
+  })
+  
+  L.<span class="function">tileLayer</span>(props.tileUrl, { maxZoom: <span class="number">19</span> }).<span class="function">addTo</span>(map)
+  L.<span class="function">marker</span>(props.center).<span class="function">addTo</span>(map)
+  
+  mapInstance.value = map
+  <span class="function">setTimeout</span>(() => map.<span class="function">invalidateSize</span>(), <span class="number">200</span>)
+})
+
+<span class="comment">// ✅ 优势4：完整清理生命周期</span>
+<span class="type">onUnmounted</span>(() => {
+  mapInstance.value?.<span class="function">remove</span>()
+  mapInstance.value = <span class="keyword">null</span>
+})
+
+<span class="comment">// ✅ 优势5：暴露方法给父组件</span>
+<span class="function">defineExpose</span>({
+  <span class="function">getMapInstance</span>: () => mapInstance.value
+})</pre>
+                </div>
+            </div>
+        </div>
+        
+        <div class="features-section">
+            <h2>🔍 5大核心差异详解</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <h3>1️⃣ TypeScript 类型安全</h3>
+                    <p>精细版本定义了完整的 <code>Props</code> 接口，包括参数类型、默认值，让 IDE 能够提示和检查。</p>
+                </div>
+                <div class="feature-card">
+                    <h3>2️⃣ Props 可配置性</h3>
+                    <p>地图中心点、缩放级别、瓦片URL都可以通过 props 传入，实现组件复用。</p>
+                </div>
+                <div class="feature-card">
+                    <h3>3️⃣ 生命周期清理</h3>
+                    <p><code>onUnmounted</code> 中调用 <code>map.remove()</code>，防止内存泄漏。</p>
+                </div>
+                <div class="feature-card">
+                    <h3>4️⃣ 性能优化</h3>
+                    <p>使用 <code>shallowRef</code> 而非 <code>ref</code>，避免 Leaflet 实例的深度响应式。</p>
+                </div>
+                <div class="feature-card">
+                    <h3>5️⃣ 窗口自适应</h3>
+                    <p>使用 <code>setTimeout + invalidateSize()</code> 确保地图尺寸正确。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

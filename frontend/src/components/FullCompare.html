@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaflet组件 - 功能对比</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px 20px;
+            min-height: 100vh;
+        }
+        .container { max-width: 1600px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 30px; color: white; }
+        header h1 { font-size: 36px; margin-bottom: 10px; }
+        header p { font-size: 18px; opacity: 0.9; }
+        
+        .maps-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .map-card {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        
+        .map-header {
+            padding: 20px;
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .basic-header { background: linear-gradient(135deg, #f093fb, #f5576c); }
+        .enhanced-header { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+        
+        .map-container { height: 400px; width: 100%; }
+        
+        .map-info {
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        
+        .prompt-box {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+            font-size: 14px;
+        }
+        
+        .prompt-box strong { color: #667eea; }
+        
+        .feature-list {
+            list-style: none;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        
+        .feature-list li {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+        
+        .icon-yes { color: #4caf50; font-weight: bold; }
+        .icon-no { color: #f44336; font-weight: bold; }
+        
+        /* 差异说明区 */
+        .diff-section {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        
+        .diff-section h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            color: #333;
+        }
+        
+        .diff-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        .diff-card {
+            padding: 20px;
+            border-radius: 12px;
+        }
+        
+        .diff-card.basic {
+            background: #fff5f5;
+            border: 2px solid #f5576c;
+        }
+        
+        .diff-card.enhanced {
+            background: #f0fff4;
+            border: 2px solid #00c6ff;
+        }
+        
+        .diff-card h3 {
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .diff-card.basic h3 { color: #f5576c; }
+        .diff-card.enhanced h3 { color: #00c6ff; }
+        
+        .diff-card ul {
+            list-style: none;
+        }
+        
+        .diff-card li {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+            font-size: 14px;
+        }
+        
+        .diff-card li:last-child {
+            border-bottom: none;
+        }
+        
+        /* 代码对比 */
+        .code-section {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        
+        .code-section h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            color: #333;
+        }
+        
+        .code-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .code-block {
+            background: #1e1e1e;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .code-title {
+            padding: 12px 20px;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .code-title.basic { background: #f5576c; }
+        .code-title.enhanced { background: #00c6ff; }
+        
+        .code-body {
+            padding: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        pre {
+            margin: 0;
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            color: #d4d4d4;
+        }
+        
+        .comment { color: #6a9955; }
+        .keyword { color: #569cd6; }
+        .function { color: #dcdcaa; }
+        .string { color: #ce9178; }
+        .type { color: #4ec9b0; }
+        .number { color: #b5cea8; }
+        
+        /* 结论 */
+        .conclusion {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        
+        .conclusion h2 { color: #333; margin-bottom: 15px; }
+        .conclusion p { color: #666; font-size: 16px; line-height: 1.8; }
+        .highlight { color: #667eea; font-weight: bold; }
+        
+        .tip {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+            font-size: 16px;
+        }
+
+        /* 地图控件样式 */
+        .leaflet-control-layers { border-radius: 8px !important; }
+        .info-box {
+            padding: 10px 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            font-size: 14px;
+        }
+        .info-box strong { color: #667eea; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🗺️ Leaflet 地图组件 - 功能对比</h1>
+            <p>粗略 vs 精细提示词生成的地图功能差异</p>
+        </header>
+        
+        <!-- 地图展示区 -->
+        <div class="maps-section">
+            <!-- 粗略版本 -->
+            <div class="map-card">
+                <div class="map-header basic-header">❌ 粗略提示词版本</div>
+                <div id="map-basic" class="map-container"></div>
+                <div class="map-info">
+                    <div class="prompt-box">
+                        <strong>提示词：</strong>"创建一个地图组件"
+                    </div>
+                    <ul class="feature-list">
+                        <li><span class="icon-yes">✓</span> 基础地图</li>
+                        <li><span class="icon-no">✗</span> 无图层切换</li>
+                        <li><span class="icon-no">✗</span> 无比例尺</li>
+                        <li><span class="icon-no">✗</span> 无坐标显示</li>
+                        <li><span class="icon-no">✗</span> 无自定义样式</li>
+                        <li><span class="icon-no">✗</span> 无信息面板</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- 精细版本 -->
+            <div class="map-card">
+                <div class="map-header enhanced-header">✅ 精细提示词版本</div>
+                <div id="map-enhanced" class="map-container"></div>
+                <div class="map-info">
+                    <div class="prompt-box">
+                        <strong>提示词：</strong>"Vue3+TS+Leaflet，含图层控制、比例尺、坐标显示..."
+                    </div>
+                    <ul class="feature-list">
+                        <li><span class="icon-yes">✓</span> 完整地图</li>
+                        <li><span class="icon-yes">✓</span> 图层切换</li>
+                        <li><span class="icon-yes">✓</span> 比例尺</li>
+                        <li><span class="icon-yes">✓</span> 坐标显示</li>
+                        <li><span class="icon-yes">✓</span> 自定义样式</li>
+                        <li><span class="icon-yes">✓</span> 信息面板</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 差异说明 -->
+        <div class="diff-section">
+            <h2>🔍 你能看到的实际差异</h2>
+            <div class="diff-grid">
+                <div class="diff-card basic">
+                    <h3>❌ 粗略版本缺少的功能</h3>
+                    <ul>
+                        <li>🔴 只有一个默认底图，无法切换</li>
+                        <li>🔴 没有比例尺，不知道距离</li>
+                        <li>🔴 鼠标移动时不显示坐标</li>
+                        <li>🔴 标记点样式默认，不美观</li>
+                        <li>🔴 没有缩放按钮样式优化</li>
+                        <li>🔴 没有地图信息面板</li>
+                    </ul>
+                </div>
+                <div class="diff-card enhanced">
+                    <h3>✅ 精细版本增加的功能</h3>
+                    <ul>
+                        <li>🟢 右上角图层控制，可切换卫星图</li>
+                        <li>🟢 左下角比例尺，显示实际距离</li>
+                        <li>🟢 右下角实时显示鼠标坐标</li>
+                        <li>🟢 自定义标记图标，更美观</li>
+                        <li>🟢 优化的缩放控件样式</li>
+                        <li>🟢 右上角信息面板显示地图状态</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 代码对比 -->
+        <div class="code-section">
+            <h2>💻 代码复杂度对比</h2>
+            <div class="code-grid">
+                <div class="code-block">
+                    <div class="code-title basic">粗略版代码（~10行）</div>
+                    <div class="code-body">
+                        <pre><span class="comment">// 只能做最基础的事情</span>
+<span class="keyword">const</span> map = L.<span class="function">map</span>(<span class="string">'map'</span>).<span class="function">setView</span>([<span class="number">39.9</span>, <span class="number">116.4</span>], <span class="number">13</span>);
+L.<span class="function">tileLayer</span>(<span class="string">'https://...'</span>).<span class="function">addTo</span>(map);
+L.<span class="function">marker</span>([<span class="number">39.9</span>, <span class="number">116.4</span>]).<span class="function">addTo</span>(map);
+
+<span class="comment">// 就这些，没了！</span>
+<span class="comment">// 没有图层控制</span>
+<span class="comment">// 没有比例尺</span>
+<span class="comment">// 没有坐标显示</span>
+<span class="comment">// 没有任何扩展</span></pre>
+                    </div>
+                </div>
+                <div class="code-block">
+                    <div class="code-title enhanced">精细版代码（~50行）</div>
+                    <div class="code-body">
+                        <pre><span class="comment">// 完整的地图功能</span>
+<span class="keyword">const</span> map = L.<span class="function">map</span>(<span class="string">'map'</span>, {
+  zoomControl: <span class="keyword">true</span>,
+  attributionControl: <span class="keyword">true</span>
+}).<span class="function">setView</span>([<span class="number">39.9</span>, <span class="number">116.4</span>], <span class="number">13</span>);
+
+<span class="comment">// 多图层支持</span>
+<span class="keyword">const</span> osm = L.<span class="function">tileLayer</span>(<span class="string">'https://...'</span>);
+<span class="keyword">const</span> satellite = L.<span class="function">tileLayer</span>(<span class="string">'https://...satellite'</span>);
+L.<span class="function">control</span>.<span class="function">layers</span>({<span class="string">'地图'</span>: osm, <span class="string">'卫星'</span>: satellite}).<span class="function">addTo</span>(map);
+
+<span class="comment">// 比例尺</span>
+L.<span class="function">control</span>.<span class="function">scale</span>({imperial: <span class="keyword">false</span>}).<span class="function">addTo</span>(map);
+
+<span class="comment">// 坐标显示</span>
+map.<span class="function">on</span>(<span class="string">'mousemove'</span>, (e) => {
+  <span class="comment">// 更新坐标显示...</span>
+});
+
+<span class="comment">// 自定义标记</span>
+L.<span class="function">marker</span>([<span class="number">39.9</span>, <span class="number">116.4</span>], {icon: customIcon}).<span class="function">addTo</span>(map);
+
+<span class="comment">// 信息面板</span>
+L.<span class="function">control</span>({position: <span class="string">'topright'</span>}).<span class="function">addTo</span>(map);</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 结论 -->
+        <div class="conclusion">
+            <h2>🎯 现在看到差异了吗？</h2>
+            <p>
+                右侧地图有<span class="highlight">图层切换、比例尺、坐标显示</span>等功能，<br>
+                这些都是精细提示词带来的<span class="highlight">实际功能提升</span>！
+            </p>
+            <div class="tip">
+                💡 提示词越精细，生成的功能越丰富、代码越健壮！
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // ========== 粗略版本：只有基础功能 ==========
+        var mapBasic = L.map('map-basic').setView([39.9042, 116.3974], 13);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(mapBasic);
+        
+        L.marker([39.9042, 116.3974]).addTo(mapBasic)
+            .bindPopup('<b>北京天安门</b>').openPopup();
+        
+        // 就这些！没有其他功能了
+        
+        
+        // ========== 精细版本：完整功能 ==========
+        var mapEnhanced = L.map('map-enhanced', {
+            center: [39.9042, 116.3974],
+            zoom: 13,
+            zoomControl: true
+        });
+        
+        // 多个图层
+        var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap',
+            maxZoom: 19
+        });
+        
+        var satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: '© Esri',
+            maxZoom: 19
+        });
+        
+        osmLayer.addTo(mapEnhanced);
+        
+        // 图层控制
+        L.control.layers({
+            '🗺️ 街道地图': osmLayer,
+            '🛰️ 卫星影像': satelliteLayer
+        }, null, {
+            position: 'topright',
+            collapsed: false
+        }).addTo(mapEnhanced);
+        
+        // 比例尺
+        L.control.scale({
+            metric: true,
+            imperial: false,
+            position: 'bottomleft'
+        }).addTo(mapEnhanced);
+        
+        // 自定义标记图标
+        var customIcon = L.divIcon({
+            className: 'custom-marker',
+            html: '<div style="background:#667eea;width:30px;height:30px;border-radius:50%;border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;color:white;font-size:16px;">📍</div>',
+            iconSize: [30, 30],
+            iconAnchor: [15, 15]
+        });
+        
+        L.marker([39.9042, 116.3974], {icon: customIcon}).addTo(mapEnhanced)
+            .bindPopup('<div style="font-size:14px;"><b style="color:#667eea;">北京天安门</b><br>故宫博物院南端<br>坐标: 39.9042°N, 116.3974°E</div>').openPopup();
+        
+        // 坐标显示控件
+        var coordControl = L.control({position: 'bottomright'});
+        coordControl.onAdd = function(map) {
+            var div = L.DomUtil.create('div', 'info-box');
+            div.innerHTML = '<strong>坐标:</strong> <span id="coords">移动鼠标查看</span>';
+            return div;
+        };
+        coordControl.addTo(mapEnhanced);
+        
+        mapEnhanced.on('mousemove', function(e) {
+            document.getElementById('coords').innerHTML = 
+                e.latlng.lat.toFixed(4) + '°N, ' + e.latlng.lng.toFixed(4) + '°E';
+        });
+        
+        // 信息面板
+        var infoControl = L.control({position: 'topright'});
+        infoControl.onAdd = function(map) {
+            var div = L.DomUtil.create('div', 'info-box');
+            div.innerHTML = '<strong>地图信息</strong><br>缩放: <span id="zoom-level">13</span><br>中心: 北京天安门';
+            return div;
+        };
+        infoControl.addTo(mapEnhanced);
+        
+        mapEnhanced.on('zoomend', function() {
+            document.getElementById('zoom-level').innerHTML = mapEnhanced.getZoom();
+        });
+    </script>
+</body>
+</html>

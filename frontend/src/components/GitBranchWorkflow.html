@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Git Feature Branch 工作流 - 分支图演示</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 40px; color: white; }
+        header h1 { font-size: 36px; margin-bottom: 10px; }
+        header p { font-size: 18px; opacity: 0.9; }
+        
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        
+        .terminal {
+            background: #1e1e1e;
+            border-radius: 8px;
+            padding: 20px;
+            font-family: 'Consolas', monospace;
+            color: #d4d4d4;
+            overflow-x: auto;
+        }
+        
+        .terminal-header {
+            background: #2d2d2d;
+            padding: 10px 20px;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            gap: 8px;
+        }
+        
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        .dot-red { background: #ff5f56; }
+        .dot-yellow { background: #ffbd2e; }
+        .dot-green { background: #27c93f; }
+        
+        .graph-container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow-x: auto;
+        }
+        
+        .graph-container h2 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .graph {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+        
+        .graph-row {
+            display: flex;
+            align-items: center;
+            white-space: pre;
+        }
+        
+        .graph-branch {
+            width: 100px;
+            color: #667eea;
+            font-weight: bold;
+        }
+        
+        .graph-symbol {
+            color: #666;
+            margin-right: 10px;
+        }
+        
+        .graph-commit {
+            color: #333;
+        }
+        
+        .graph-hash {
+            color: #999;
+            margin-left: 10px;
+            font-size: 12px;
+        }
+        
+        .graph-merge {
+            color: #27c93f;
+        }
+        
+        .graph-feature {
+            color: #f5576c;
+        }
+        
+        .graph-main {
+            color: #667eea;
+        }
+        
+        .visual-graph {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 12px;
+            margin-top: 30px;
+        }
+        
+        .visual-graph h3 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .branch-line {
+            display: flex;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px dashed #ddd;
+        }
+        
+        .branch-line:last-child {
+            border-bottom: none;
+        }
+        
+        .branch-name {
+            width: 150px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .commits {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .commit-node {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 2px solid #667eea;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .commit-node.feature {
+            border-color: #f5576c;
+        }
+        
+        .commit-hash {
+            font-family: monospace;
+            color: #999;
+            font-size: 12px;
+        }
+        
+        .commit-msg {
+            color: #333;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        
+        .arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 0;
+            color: #667eea;
+            font-size: 24px;
+        }
+        
+        .summary {
+            background: #f0fff4;
+            border-left: 4px solid #27c93f;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        
+        .summary h3 {
+            color: #27c93f;
+            margin-bottom: 15px;
+        }
+        
+        .summary ul {
+            list-style: none;
+        }
+        
+        .summary li {
+            padding: 8px 0;
+            color: #333;
+        }
+        
+        .summary li::before {
+            content: "✓ ";
+            color: #27c93f;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌳 Git Feature Branch 工作流</h1>
+            <p>创建分支 → 开发提交 → 合并回主分支 → 查看分支图</p>
+        </header>
+        
+        <!-- 操作步骤 -->
+        <div class="card">
+            <h2>📋 操作步骤演示</h2>
+            
+            <div class="terminal-header">
+                <div class="terminal-dot dot-red"></div>
+                <div class="terminal-dot dot-yellow"></div>
+                <div class="terminal-dot dot-green"></div>
+            </div>
+            <div class="terminal">
+<pre>
+# Step 1: 创建并切换到功能分支
+$ git checkout -b feature/gis-demo
+Switched to a new branch 'feature/gis-demo'
+
+# Step 2: 在功能分支上开发并提交
+$ git add .
+$ git commit -m "feat: 初始化 GIS 项目结构"
+[feature/gis-demo e87405c] feat: 初始化 GIS 项目结构
+ 36 files changed, 4047 insertions(+)
+
+$ git commit -m "docs: 更新 README，增加开发分支说明"
+[feature/gis-demo 8f3a2b1] docs: 更新 README，增加开发分支说明
+ 1 file changed, 5 insertions(+)
+
+# Step 3: 切换回 main 分支
+$ git checkout main
+Switched to branch 'main'
+
+# Step 4: 合并功能分支
+$ git merge feature/gis-demo -m "merge: 合并 feature/gis-demo 分支"
+Merge made by the 'ort' strategy.
+ 37 files changed, 4052 insertions(+)
+
+# Step 5: 查看分支图
+$ git log --graph --oneline
+</pre>
+            </div>
+        </div>
+        
+        <!-- 分支图 -->
+        <div class="graph-container">
+            <h2>📊 git log --graph 分支图</h2>
+            
+            <div class="graph">
+                <div class="graph-row">
+                    <span class="graph-branch graph-main">*</span>
+                    <span class="graph-symbol">|</span>
+                    <span class="graph-merge">*   Merge branch 'feature/gis-demo' into main</span>
+                </div>
+                <div class="graph-row">
+                    <span class="graph-branch graph-main">|\</span>
+                    <span class="graph-symbol"></span>
+                    <span class="graph-commit">|</span>
+                </div>
+                <div class="graph-row">
+                    <span class="graph-branch graph-main">| *</span>
+                    <span class="graph-symbol">\</span>
+                    <span class="graph-commit graph-feature">* 8f3a2b1 docs: 更新 README，增加开发分支说明</span>
+                </div>
+                <div class="graph-row">
+                    <span class="graph-branch graph-main">| *</span>
+                    <span class="graph-symbol">\</span>
+                    <span class="graph-commit graph-feature">* e87405c feat: 初始化 GIS 项目结构</span>
+                </div>
+                <div class="graph-row">
+                    <span class="graph-branch graph-main">|/</span>
+                    <span class="graph-symbol"></span>
+                    <span class="graph-commit">|</span>
+                </div>
+                <div class="graph-row">
+                    <span class="graph-branch graph-main">*</span>
+                    <span class="graph-symbol"> </span>
+                    <span class="graph-commit">  (empty repository)</span>
+                </div>
+            </div>
+            
+            <div class="visual-graph">
+                <h3>🎨 分支合并可视化</h3>
+                
+                <div class="branch-line">
+                    <span class="branch-name">main</span>
+                    <div class="commits">
+                        <div class="commit-node">
+                            <div class="commit-hash">8f3a2b1</div>
+                            <div class="commit-msg">merge</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="arrow">↑ 合并</div>
+                
+                <div class="branch-line">
+                    <span class="branch-name">main</span>
+                    <div class="commits">
+                        <div class="commit-node">
+                            <div class="commit-hash">e87405c</div>
+                            <div class="commit-msg">feat: 初始化项目</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="text-align: center; padding: 20px; color: #667eea; font-size: 24px;">│</div>
+                <div style="text-align: center; color: #667eea; font-size: 20px;">└─ ← 从 main 创建 feature 分支</div>
+                <div style="text-align: center; padding: 20px; color: #f5576c; font-size: 24px;">│</div>
+                
+                <div class="branch-line">
+                    <span class="branch-name" style="color: #f5576c;">feature/gis-demo</span>
+                    <div class="commits">
+                        <div class="commit-node feature">
+                            <div class="commit-hash">e87405c</div>
+                            <div class="commit-msg">feat: 初始化项目</div>
+                        </div>
+                        <div class="commit-node feature">
+                            <div class="commit-hash">8f3a2b1</div>
+                            <div class="commit-msg">docs: 更新 README</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 总结 -->
+        <div class="card">
+            <h2>✅ 工作流总结</h2>
+            <div class="summary">
+                <h3>Feature Branch 工作流优点</h3>
+                <ul>
+                    <li>功能开发与主线隔离，互不影响</li>
+                    <li>方便代码审查和回滚</li>
+                    <li>保持 main 分支始终可用</li>
+                    <li>支持并行开发多个功能</li>
+                    <li>提交历史清晰可追溯</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- 常用命令 -->
+        <div class="card">
+            <h2>💡 常用 Git 分支命令</h2>
+            <div class="terminal">
+<pre>
+# 分支操作
+git branch                    # 查看本地分支
+git branch -a                 # 查看所有分支
+git checkout -b feature/xxx   # 创建并切换到新分支
+git checkout main             # 切换到 main 分支
+git branch -d feature/xxx     # 删除分支
+
+# 合并操作
+git merge feature/xxx          # 合并指定分支到当前分支
+git merge --no-ff feature/xxx # 非快速合并，保留分支历史
+
+# 查看历史
+git log --oneline             # 简洁提交历史
+git log --graph               # 分支图
+git log --graph --oneline      # 简洁分支图
+</pre>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
