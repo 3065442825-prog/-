@@ -35,7 +35,7 @@ hs_err_pid*
 replay_pid*
 
 # ---------- Docker / 容器 ----------
-docker-data/
+docker-data/*/data/           # 运行时数据不纳入版本控制
 pgdata/
 
 # ---------- IDE / 编辑器 ----------
