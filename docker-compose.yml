@@ -1,0 +1,32 @@
+version: "3.8"
+
+services:
+  # PostGIS 空间数据库
+  postgis:
+    image: postgis/postgis:16-3.4
+    container_name: gis-postgis
+    environment:
+      POSTGRES_DB: gisdb
+      POSTGRES_USER: gisuser
+      POSTGRES_PASSWORD: gispass
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  # pgAdmin 数据库管理界面
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: gis-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@gis.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "8080:80"
+    depends_on:
+      - postgis
+    restart: unless-stopped
+
+volumes:
+  pgdata:
