@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>北京生活地图 · 个人 GIS 作品集</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+<style>
+  /* ═══════════════════════════════════════════════════════════
+     DESIGN SYSTEM
+     ═══════════════════════════════════════════════════════════ */
+  :root {
+    --accent:      #d97706;
+    --accent-3d:   #0891b2;
+    --surface:     #ffffff;
+    --glass-bg:    rgba(255,255,255,0.84);
+    --glass-border:rgba(255,255,255,0.50);
+    --text:        #1e293b;
+    --text-muted:  #64748b;
+    --border:      #e2e8f0;
+    --border-strong:#cbd5e1;
+    --track-off:   #cbd5e1;
+    --shadow-sm:   0 1px 3px rgba(0,0,0,0.04);
+    --shadow:      0 4px 20px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04);
+    --shadow-lg:   0 8px 32px rgba(0,0,0,0.08);
+    --radius-xs:   4px;
+    --radius-sm:   7px;
+    --radius:      10px;
+    --radius-lg:   14px;
+    --transition:  0.2s ease;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:100%;height:100%;overflow:hidden;font-family:"Inter","PingFang SC","Microsoft YaHei",sans-serif;font-size:12.5px;color:var(--text);background:#0b1120;line-height:1.4;-webkit-font-smoothing:antialiased}
+  #map{position:absolute;inset:0;z-index:1}
+
+  /* ═══════════════════════════════════════════════════════════
+     GLASS PANEL
+     ═══════════════════════════════════════════════════════════ */
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px) saturate(1.15);
+    -webkit-backdrop-filter: blur(12px) saturate(1.15);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow);
+    border-radius: var(--radius);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     SIDEBAR LAYOUT
+     ═══════════════════════════════════════════════════════════ */
+  #sidebar {
+    position:absolute;z-index:10;top:10px;left:10px;bottom:10px;
+    width:350px;display:flex;flex-direction:column;gap:6px;
+    pointer-events:none;
+  }
+  #sidebar > * { pointer-events:auto; }
+
+  /* ── Header ──────────────────────────────────────────────── */
+  .header-card { padding:12px 15px; flex-shrink:0; }
+  .header-card h1 {
+    font-size:17px;font-weight:700;letter-spacing:-0.3px;
+    display:flex;align-items:center;gap:7px;color:var(--text);
+  }
+  .header-card h1 .icon { font-size:21px; }
+  .header-card .sub {
+    font-size:10.5px;color:var(--text-muted);margin-top:3px;
+    display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  }
+  .tag {
+    display:inline-flex;align-items:center;gap:2px;
+    padding:2px 8px;border-radius:10px;font-size:9.5px;font-weight:600;
+    letter-spacing:0.2px;
+  }
+  .tag-gis { background:#fef3c7; color:#b45309; }
+  .tag-ml  { background:#e0e7ff; color:#4338ca; }
+  .tag-3d  { background:#cffafe; color:#0e7490; }
+
+  /* ── Stat Cards ──────────────────────────────────────────── */
+  .stat-row { display:flex; gap:5px; flex-shrink:0; }
+  .stat-card {
+    flex:1; padding:10px 6px 9px; text-align:center; border-radius:var(--radius-sm);
+    background:rgba(255,255,255,0.60); backdrop-filter:blur(6px);
+    border:1px solid rgba(255,255,255,0.55); cursor:default;
+    transition: transform var(--transition), box-shadow var(--transition);
+  }
+  .stat-card:hover { transform:translateY(-2px); box-shadow:var(--shadow); }
+  .stat-card .val { font-size:18px; font-weight:700; letter-spacing:-0.4px; color:var(--text); }
+  .stat-card .lbl { font-size:10px; color:var(--text-muted); margin-top:1px; }
+  .stat-card.hl {
+    background:linear-gradient(135deg, #d97706 0%, #ea580c 100%);
+    border:none; box-shadow:0 2px 12px rgba(217,119,6,0.25);
+  }
+  .stat-card.hl .val, .stat-card.hl .lbl { color:#fff; }
+
+  /* ── Scroll Area ─────────────────────────────────────────── */
+  .ctrl-scroll {
+    flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:5px;
+    padding-right:3px; scrollbar-width:thin; scrollbar-color:var(--track-off) transparent;
+  }
+  .ctrl-scroll::-webkit-scrollbar { width:4px; }
+  .ctrl-scroll::-webkit-scrollbar-thumb { background:var(--track-off); border-radius:4px; }
+
+  /* ═══════════════════════════════════════════════════════════
+     SECTION CARDS
+     ═══════════════════════════════════════════════════════════ */
+  .section { padding:10px 14px; flex-shrink:0; }
+  .sec-title {
+    font-size:10.5px;font-weight:700;text-transform:uppercase;
+    letter-spacing:0.6px;color:var(--text-muted);margin-bottom:8px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .sec-title::after { content:'';flex:1;height:1px;background:var(--border); }
+
+  /* ═══════════════════════════════════════════════════════════
+     BUTTON SYSTEM
+     ═══════════════════════════════════════════════════════════ */
+  .btn-row { display:flex; gap:4px; flex-wrap:wrap; }
+
+  /* base */
+  button {
+    display:inline-flex;align-items:center;justify-content:center;gap:3px;
+    border:1.5px solid var(--border);border-radius:var(--radius-sm);
+    background:var(--surface);color:var(--text);
+    padding:5px 10px;font-size:10.5px;font-weight:500;cursor:pointer;
+    font-family:inherit;white-space:nowrap;user-select:none;
+    transition: all var(--transition);
+  }
+  button:hover  { background:#f8fafc; border-color:var(--border-strong); }
+  button:active { transform:scale(0.97); }
+  button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
+  /* accent active */
+  button.on {
+    background:var(--accent);border-color:var(--accent);color:#fff;
+    box-shadow:0 1px 4px rgba(217,119,6,0.2);
+  }
+  button.on:hover { background:#b45309; border-color:#b45309; }
+
+  /* 3D accent active */
+  button.on-3d {
+    background:var(--accent-3d);border-color:var(--accent-3d);color:#fff;
+    box-shadow:0 1px 4px rgba(8,145,178,0.2);
+  }
+  button.on-3d:hover { background:#0e7490; border-color:#0e7490; }
+
+  /* category pill */
+  .cat-btn {
+    padding:4px 10px;font-size:10px;border-radius:14px;
+    border:1.5px solid var(--cat-color, var(--border));
+    color:var(--cat-color, var(--text-muted));background:var(--surface);
+  }
+  .cat-btn:hover { background:color-mix(in srgb, var(--cat-color, #f8fafc) 8%, #fff); }
+  .cat-btn.on {
+    background:var(--cat-color, var(--accent));
+    border-color:var(--cat-color, var(--accent));color:#fff;
+  }
+  /* "全部" button – uses accent when on */
+  .cat-btn-all { --cat-color: var(--accent); }
+
+  /* icon button */
+  button.icon-btn { padding:5px 8px; }
+
+  /* ═══════════════════════════════════════════════════════════
+     TOGGLE SWITCH (custom)
+     ═══════════════════════════════════════════════════════════ */
+  .toggle {
+    display:flex;align-items:center;gap:9px;cursor:pointer;
+    font-size:11.5px;padding:3px 0;user-select:none;
+  }
+  .toggle input { position:absolute;opacity:0;width:0;height:0; }
+  .toggle-track {
+    width:34px;height:20px;background:var(--track-off);border-radius:10px;
+    position:relative;transition:background var(--transition);flex-shrink:0;
+  }
+  .toggle-track::after {
+    content:'';position:absolute;width:16px;height:16px;background:#fff;
+    border-radius:50%;top:2px;left:2px;transition:transform var(--transition);
+    box-shadow:0 1px 3px rgba(0,0,0,0.12);
+  }
+  .toggle input:checked + .toggle-track { background:var(--accent); }
+  .toggle input:checked + .toggle-track::after { transform:translateX(14px); }
+  .toggle input:focus-visible + .toggle-track {
+    outline:2px solid var(--accent);outline-offset:2px;
+  }
+  /* 3D accent variant */
+  .toggle.toggle-3d input:checked + .toggle-track { background:var(--accent-3d); }
+
+  /* ═══════════════════════════════════════════════════════════
+     RANGE SLIDERS
+     ═══════════════════════════════════════════════════════════ */
+  .range-row { margin-top:6px; }
+  .range-head { display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-bottom:3px; }
+  .range-head span:last-child { font-weight:600;color:var(--text); }
+  input[type="range"] {
+    -webkit-appearance:none;appearance:none;
+    width:100%;height:4px;background:var(--border);border-radius:2px;
+    cursor:pointer;outline:none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance:none;appearance:none;
+    width:16px;height:16px;border-radius:50%;background:var(--accent);
+    border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.15);
+    cursor:pointer;transition:transform var(--transition);
+  }
+  input[type="range"]::-webkit-slider-thumb:hover { transform:scale(1.15); }
+  input[type="range"]::-moz-range-thumb {
+    width:16px;height:16px;border-radius:50%;background:var(--accent);
+    border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.15);
+    cursor:pointer;
+  }
+  input[type="range"].r3d::-webkit-slider-thumb { background:var(--accent-3d); }
+  input[type="range"].r3d::-moz-range-thumb      { background:var(--accent-3d); }
+
+  /* ═══════════════════════════════════════════════════════════
+     LEGEND
+     ═══════════════════════════════════════════════════════════ */
+  #legend {
+    position:absolute;z-index:10;bottom:32px;right:10px;
+    padding:8px 12px;min-width:155px;font-size:10.5px;
+    max-height:50vh;overflow-y:auto;
+  }
+  #legend .title { font-weight:700;margin-bottom:4px;font-size:11px;color:var(--text); }
+  .lr { display:flex;align-items:center;gap:6px;margin-top:3px; }
+  .sw {
+    display:inline-block;width:14px;height:9px;border-radius:2px;
+    border:1px solid rgba(0,0,0,0.08);flex-shrink:0;
+  }
+  .sw.dot  { border-radius:50%;width:8px;height:8px;border:none; }
+  .sw.line { width:18px;height:2.5px;border-radius:2px;border:none; }
+
+  /* ═══════════════════════════════════════════════════════════
+     BOTTOM BAR
+     ═══════════════════════════════════════════════════════════ */
+  #bottombar {
+    position:absolute;z-index:10;bottom:10px;left:368px;right:10px;
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    font-size:10.5px;color:var(--text-muted);pointer-events:none;
+  }
+  #coords {
+    padding:4px 10px;font-variant-numeric:tabular-nums;
+    font-family:"JetBrains Mono","SF Mono","Consolas",monospace;min-width:210px;
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     MAPLIBRE POPUP OVERRIDES
+     ═══════════════════════════════════════════════════════════ */
+  .maplibregl-popup { z-index:100 !important; }
+  .maplibregl-popup-content {
+    font-family:inherit;font-size:11.5px;border-radius:var(--radius) !important;
+    box-shadow:var(--shadow-lg) !important;padding:10px 12px !important;
+    line-height:1.55;border:1px solid var(--glass-border);
+  }
+  .maplibregl-popup-content .stars { color:#f59e0b;letter-spacing:1px; }
+  .maplibregl-popup-content .cat-tag {
+    display:inline-block;padding:2px 7px;border-radius:10px;
+    font-size:9.5px;font-weight:600;margin-bottom:4px;
+  }
+  .maplibregl-popup-content b { color:var(--accent); }
+  .maplibregl-popup-tip { border-top-color:rgba(255,255,255,0.9) !important; }
+
+  /* ═══════════════════════════════════════════════════════════
+     RESPONSIVE
+     ═══════════════════════════════════════════════════════════ */
+  @media(max-width:768px){
+    #sidebar{width:280px}#bottombar{left:296px}
+  }
+  @media(max-width:480px){
+    #sidebar{width:100%;left:0;top:0;bottom:auto;max-height:44vh;border-radius:0}
+    #bottombar{display:none}
+  }
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SIDEBAR
+     ═══════════════════════════════════════════════════════════ -->
+<div id="sidebar">
+
+  <div class="glass header-card">
+    <h1><span class="icon">🧭</span>北京生活地图</h1>
+    <div class="sub">
+      个人 GIS 作品集
+      <span class="tag tag-gis">GIS</span>
+      <span class="tag tag-ml">MapLibre GL</span>
+      <span class="tag tag-3d">3D</span>
+    </div>
+  </div>
+
+  <div class="stat-row">
+    <div class="stat-card"><div class="val" id="statPoi">50</div><div class="lbl">足迹点</div></div>
+    <div class="stat-card hl"><div class="val" id="statRoutes">8</div><div class="lbl">探索路线</div></div>
+    <div class="stat-card"><div class="val" id="statDistricts">10</div><div class="lbl">覆盖区域</div></div>
+  </div>
+
+  <div class="ctrl-scroll">
+
+    <!-- 底图 -->
+    <div class="glass section">
+      <div class="sec-title">🗺️ 底图选择</div>
+      <div class="btn-row" id="basemapGroup">
+        <button class="on" data-style="amap">高德标准</button>
+        <button data-style="amap-sat">卫星影像</button>
+        <button data-style="amap-dark">暗色主题</button>
+      </div>
+    </div>
+
+    <!-- 足迹 -->
+    <div class="glass section">
+      <div class="sec-title">📍 足迹点</div>
+      <div class="btn-row" id="catGroup" style="margin-bottom:7px;">
+        <button class="cat-btn cat-btn-all on" data-cat="all">全部</button>
+        <button class="cat-btn" data-cat="美食" style="--cat-color:#ef4444">🍜 美食</button>
+        <button class="cat-btn" data-cat="文化" style="--cat-color:#8b5cf6">🏛️ 文化</button>
+        <button class="cat-btn" data-cat="咖啡" style="--cat-color:#f59e0b">☕ 咖啡</button>
+        <button class="cat-btn" data-cat="户外" style="--cat-color:#10b981">🌳 户外</button>
+        <button class="cat-btn" data-cat="购物" style="--cat-color:#ec4899">🛍️ 购物</button>
+      </div>
+      <label class="toggle"><input id="togglePoi" type="checkbox" checked /><i class="toggle-track"></i>显示足迹点</label>
+      <label class="toggle"><input id="togglePoiCluster" type="checkbox" /><i class="toggle-track"></i>点聚合模式</label>
+    </div>
+
+    <!-- 路线 -->
+    <div class="glass section">
+      <div class="sec-title">🛤️ 探索路线</div>
+      <div id="routeToggles"></div>
+      <label class="toggle" style="margin-top:5px"><input id="toggleAllRoutes" type="checkbox" checked /><i class="toggle-track"></i>全部路线</label>
+      <label class="toggle"><input id="toggleRouteLabel" type="checkbox" checked /><i class="toggle-track"></i>路线标注</label>
+    </div>
+
+    <!-- 圈层 -->
+    <div class="glass section">
+      <div class="sec-title">🎯 活动圈层</div>
+      <label class="toggle"><input id="toggleZone1" type="checkbox" checked /><i class="toggle-track"></i>核心生活圈</label>
+      <label class="toggle"><input id="toggleZone2" type="checkbox" checked /><i class="toggle-track"></i>工作学习圈</label>
+      <label class="toggle"><input id="toggleZone3" type="checkbox" /><i class="toggle-track"></i>周末探索圈</label>
+    </div>
+
+    <!-- 区域专题 -->
+    <div class="glass section">
+      <div class="sec-title">📊 区域探索指数</div>
+      <label class="toggle"><input id="toggleDistrict" type="checkbox" /><i class="toggle-track"></i>区域 choropleth</label>
+      <div class="btn-row" id="schemeGroup" style="margin-top:7px;">
+        <button class="on" data-scheme="density">探索密度</button>
+        <button data-scheme="count">足迹数量</button>
+        <button data-scheme="category">分类着色</button>
+      </div>
+    </div>
+
+    <!-- 3D -->
+    <div class="glass section">
+      <div class="sec-title">🏗️ 建筑 3D · fill-extrusion</div>
+      <label class="toggle toggle-3d"><input id="toggleBuildings" type="checkbox" /><i class="toggle-track"></i>启用 3D 拉伸</label>
+      <div class="range-row">
+        <div class="range-head"><span>高度系数</span><span id="heightVal">1.0×</span></div>
+        <input class="r3d" id="heightMult" type="range" min="0.3" max="2.5" step="0.1" value="1.0" />
+      </div>
+      <div class="range-row">
+        <div class="range-head"><span>网格密度</span><span id="gridVal">中</span></div>
+        <input class="r3d" id="gridStep" type="range" min="0.004" max="0.014" step="0.001" value="0.008" />
+      </div>
+      <div class="btn-row" style="margin-top:8px">
+        <button class="icon-btn" id="regenBuildings">🔄 重新生成</button>
+        <button class="icon-btn" id="resetView">🏠 重置视角</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     OVERLAYS
+     ═══════════════════════════════════════════════════════════ -->
+<div id="legend" class="glass"></div>
+<div id="bottombar">
+  <div id="coords" class="glass">116.4074°E  ·  39.9300°N  ·  zoom 9.6</div>
+  <div class="glass" style="padding:4px 10px">© 高德地图 · 个人作品集</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCRIPTS
+     ═══════════════════════════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script>
+(function(){'use strict';
+
+/* ═══════════════════════════════════════════════════════════════
+   DATA
+   ═══════════════════════════════════════════════════════════════ */
+
+// ── 足迹 POI ───────────────────────────────────────────────
+var poiData = [
+  {name:'四季民福烤鸭店(故宫)', cat:'美食',rating:5,visits:8, lng:116.403,lat:39.918,note:'故宫角楼景观位'},
+  {name:'大董烤鸭(工体)',       cat:'美食',rating:5,visits:3, lng:116.448,lat:39.935,note:'意境菜代表'},
+  {name:'聚宝源涮肉(牛街)',     cat:'美食',rating:5,visits:5, lng:116.365,lat:39.886,note:'排队 2h 也值'},
+  {name:'花家怡园(簋街)',       cat:'美食',rating:4,visits:4, lng:116.435,lat:39.939,note:'四合院里的京味'},
+  {name:'利群烤鸭(北翔凤)',     cat:'美食',rating:4,visits:2, lng:116.407,lat:39.897,note:'胡同深处老店'},
+  {name:'护国寺小吃(总店)',     cat:'美食',rating:3,visits:6, lng:116.372,lat:39.932,note:'京味早点一站式'},
+  {name:'姚记炒肝(鼓楼)',       cat:'美食',rating:4,visits:4, lng:116.400,lat:39.940,note:'炒肝+包子标配'},
+  {name:'那家小馆(永安里)',     cat:'美食',rating:4,visits:3, lng:116.444,lat:39.913,note:'官府私房菜'},
+  {name:'湘爱(三里屯)',         cat:'美食',rating:4,visits:2, lng:116.456,lat:39.935,note:'湘菜 fine dining'},
+  {name:'京兆尹(雍和宫)',       cat:'美食',rating:5,visits:1, lng:116.419,lat:39.943,note:'米其林三星素斋'},
+  {name:'故宫博物院',           cat:'文化',rating:5,visits:12,lng:116.397,lat:39.919,note:'每次都有新发现'},
+  {name:'国家博物馆',           cat:'文化',rating:5,visits:4, lng:116.401,lat:39.906,note:'古代中国展厅必看'},
+  {name:'798艺术区',            cat:'文化',rating:4,visits:7, lng:116.495,lat:39.984,note:'画廊+咖啡+拍照'},
+  {name:'中国美术馆',           cat:'文化',rating:4,visits:3, lng:116.410,lat:39.924,note:'常设展质量高'},
+  {name:'红砖美术馆',           cat:'文化',rating:4,visits:2, lng:116.508,lat:40.008,note:'建筑本身就是展品'},
+  {name:'今日美术馆',           cat:'文化',rating:4,visits:3, lng:116.471,lat:39.895,note:'当代艺术前沿'},
+  {name:'国家大剧院',           cat:'文化',rating:5,visits:2, lng:116.389,lat:39.904,note:'穹顶之下的音乐'},
+  {name:'天坛公园',             cat:'文化',rating:5,visits:5, lng:116.411,lat:39.882,note:'祈年殿+回音壁'},
+  {name:'雍和宫',               cat:'文化',rating:4,visits:4, lng:116.421,lat:39.947,note:'京城香火最旺'},
+  {name:'国子监+孔庙',          cat:'文化',rating:4,visits:2, lng:116.414,lat:39.946,note:'古柏参天'},
+  {name:'Metal Hands(鼓楼)',    cat:'咖啡',rating:5,visits:10,lng:116.397,lat:39.942,note:'dirty 天花板'},
+  {name:'%Arabica(三里屯)',     cat:'咖啡',rating:4,visits:4, lng:116.457,lat:39.933,note:'京都来的网红'},
+  {name:'Seesaw Coffee(朝悦)',  cat:'咖啡',rating:4,visits:3, lng:116.524,lat:39.925,note:'空间设计一流'},
+  {name:'大小咖啡(北锣)',       cat:'咖啡',rating:4,visits:6, lng:116.408,lat:39.946,note:'胡同里的精品'},
+  {name:'Soloist(杨梅竹斜街)',  cat:'咖啡',rating:4,visits:3, lng:116.397,lat:39.895,note:'复古工业风'},
+  {name:'Voyage Coffee(798)',   cat:'咖啡',rating:4,visits:4, lng:116.496,lat:39.983,note:'手冲专门店'},
+  {name:'铁手咖啡(五道营)',     cat:'咖啡',rating:4,visits:5, lng:116.418,lat:39.946,note:'也是 Metal Hands'},
+  {name:'Grid Coffee(三里屯)',  cat:'咖啡',rating:3,visits:2, lng:116.454,lat:39.932,note:'快餐式精品'},
+  {name:'煮叶(颐堤港)',         cat:'咖啡',rating:3,visits:2, lng:116.494,lat:39.965,note:'新式茶馆'},
+  {name:'naive理想国(郎园)',    cat:'咖啡',rating:4,visits:1, lng:116.505,lat:39.918,note:'书+咖啡+酒'},
+  {name:'奥林匹克森林公园',     cat:'户外',rating:5,visits:15,lng:116.393,lat:40.022,note:'跑步圣地南园 5km'},
+  {name:'朝阳公园',             cat:'户外',rating:4,visits:10,lng:116.478,lat:39.947,note:'野餐+皮划艇'},
+  {name:'颐和园',               cat:'户外',rating:5,visits:6, lng:116.275,lat:39.999,note:'昆明湖落日绝美'},
+  {name:'北海公园',             cat:'户外',rating:4,visits:5, lng:116.389,lat:39.926,note:'让我们荡起双桨'},
+  {name:'景山公园',             cat:'户外',rating:5,visits:7, lng:116.396,lat:39.925,note:'中轴线最佳观景点'},
+  {name:'玉渊潭公园',           cat:'户外',rating:4,visits:4, lng:116.323,lat:39.917,note:'樱花季人山人海'},
+  {name:'地坛公园',             cat:'户外',rating:3,visits:3, lng:116.420,lat:39.953,note:'银杏季很出片'},
+  {name:'香山公园',             cat:'户外',rating:4,visits:3, lng:116.193,lat:40.000,note:'红叶季必去'},
+  {name:'圆明园',               cat:'户外',rating:4,visits:4, lng:116.304,lat:40.008,note:'荷花开时最美'},
+  {name:'将府公园',             cat:'户外',rating:3,visits:5, lng:116.512,lat:39.962,note:'废弃铁路拍照'},
+  {name:'三里屯太古里',         cat:'购物',rating:5,visits:20,lng:116.455,lat:39.935,note:'潮流地标'},
+  {name:'SKP',                  cat:'购物',rating:5,visits:4, lng:116.474,lat:39.912,note:'亚洲店王'},
+  {name:'蓝色港湾',             cat:'购物',rating:4,visits:8, lng:116.476,lat:39.950,note:'欧式小镇+灯光节'},
+  {name:'朝阳大悦城',           cat:'购物',rating:4,visits:12,lng:116.524,lat:39.925,note:'朝青商圈核心'},
+  {name:'西单大悦城',           cat:'购物',rating:3,visits:3, lng:116.376,lat:39.913,note:'学生时代回忆'},
+  {name:'侨福芳草地',           cat:'购物',rating:4,visits:5, lng:116.446,lat:39.920,note:'艺术商场鼻祖'},
+  {name:'国贸商城',             cat:'购物',rating:4,visits:6, lng:116.462,lat:39.911,note:'CBD 精英生活'},
+  {name:'王府中环',             cat:'购物',rating:4,visits:3, lng:116.414,lat:39.914,note:'港式高端商场'},
+];
+
+// ── 探索路线 ───────────────────────────────────────────────
+var routeData = [
+  {name:'中轴线之旅', color:'#dc2626',dash:[1],
+   coords:[[116.394,39.872],[116.396,39.883],[116.398,39.899],[116.398,39.908],[116.397,39.919],[116.397,39.925],[116.397,39.940],[116.398,39.944]],desc:'永定门→天桥→前门→天安门→故宫→景山→鼓楼→钟楼'},
+  {name:'三里屯—国贸线', color:'#7c3aed',dash:[1],
+   coords:[[116.455,39.935],[116.453,39.940],[116.462,39.947],[116.476,39.950],[116.478,39.947],[116.470,39.930],[116.461,39.910]],desc:'太古里→使馆区→亮马河→蓝色港湾→朝阳公园→CBD'},
+  {name:'798 艺术之旅', color:'#0891b2',dash:[1],
+   coords:[[116.483,39.997],[116.488,39.990],[116.495,39.984],[116.500,39.980],[116.508,39.978]],desc:'望京→798→草场地→环铁'},
+  {name:'学府巡礼', color:'#2563eb',dash:[1],
+   coords:[[116.304,39.996],[116.326,39.999],[116.338,39.993],[116.332,39.987],[116.316,39.983]],desc:'北大西门→清华西门→五道口→中关村'},
+  {name:'胡同探秘', color:'#d97706',dash:[3,2],
+   coords:[[116.408,39.946],[116.405,39.939],[116.403,39.935],[116.388,39.934],[116.386,39.940],[116.393,39.939]],desc:'北锣→南锣→帽儿胡同→什刹海→后海→烟袋斜街'},
+  {name:'奥森绿道', color:'#16a34a',dash:[4,2],
+   coords:[[116.391,39.987],[116.395,39.993],[116.389,39.996],[116.393,40.016],[116.398,40.034]],desc:'奥体→鸟巢→水立方→奥森南园→北园'},
+  {name:'西郊踏青', color:'#65a30d',dash:[2,2],
+   coords:[[116.285,39.998],[116.275,40.002],[116.304,40.008],[116.307,39.998],[116.326,39.999]],desc:'颐和园→圆明园→北大→清华'},
+  {name:'长安街夜骑', color:'#9333ea',dash:[1],
+   coords:[[116.358,39.908],[116.375,39.911],[116.398,39.909],[116.418,39.910],[116.436,39.908],[116.461,39.910]],desc:'复兴门→西单→天安门→东单→建国门→国贸'},
+];
+
+// ── 活动圈层 ───────────────────────────────────────────────
+function circlePoly(cx,cy,r,n){n=n||24;var p=[];for(var i=0;i<=n;i++){var a=Math.PI*2*i/n;p.push([cx+Math.cos(a)*r,cy+Math.sin(a)*r]);}return p;}
+var zoneData = [
+  {name:'核心生活圈',id:'zone1',color:'#f97316',cx:116.458,cy:39.938,r:0.032,desc:'日常活动 (三里屯/工体/亮马桥)'},
+  {name:'工作学习圈',id:'zone2',color:'#3b82f6',cx:116.316,cy:39.983,r:0.028,desc:'工作学习 (中关村/五道口/学院路)'},
+  {name:'周末探索圈',id:'zone3',color:'#8b5cf6',cx:116.407,cy:39.940,r:0.078,desc:'周末远距离探索 (全城)'},
+];
+
+// ── 行政区 + 自动计算探索指数 ─────────────────────────────
+var districtDefs = [
+  {name:'东城',  polygon:[[116.380,39.885],[116.455,39.885],[116.455,39.955],[116.380,39.955],[116.380,39.885]]},
+  {name:'西城',  polygon:[[116.310,39.875],[116.385,39.875],[116.385,39.955],[116.310,39.955],[116.310,39.875]]},
+  {name:'朝阳',  polygon:[[116.455,39.825],[116.610,39.825],[116.610,40.020],[116.455,40.020],[116.455,39.825]]},
+  {name:'海淀',  polygon:[[116.205,39.915],[116.380,39.915],[116.380,40.090],[116.205,40.090],[116.205,39.915]]},
+  {name:'丰台',  polygon:[[116.225,39.760],[116.430,39.760],[116.430,39.875],[116.225,39.875],[116.225,39.760]]},
+  {name:'石景山',polygon:[[116.120,39.865],[116.225,39.865],[116.225,39.955],[116.120,39.955],[116.120,39.865]]},
+  {name:'通州',  polygon:[[116.610,39.785],[116.830,39.785],[116.830,40.020],[116.610,40.020],[116.610,39.785]]},
+  {name:'大兴',  polygon:[[116.250,39.600],[116.520,39.600],[116.520,39.760],[116.250,39.760],[116.250,39.600]]},
+  {name:'昌平',  polygon:[[116.150,40.090],[116.440,40.090],[116.440,40.330],[116.150,40.330],[116.150,40.090]]},
+  {name:'顺义',  polygon:[[116.440,40.020],[116.770,40.020],[116.770,40.240],[116.440,40.240],[116.440,40.020]]},
+];
+function pip(pt,poly){var x=pt[0],y=pt[1],inside=false;for(var i=0,j=poly.length-1;i<poly.length;j=i++){var xi=poly[i][0],yi=poly[i][1],xj=poly[j][0],yj=poly[j][1];if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))inside=!inside;}return inside;}
+function computeDistrictStats(){
+  return districtDefs.map(function(d){
+    var count=0,sumR=0;
+    poiData.forEach(function(p){if(pip([p.lng,p.lat],d.polygon)){count++;sumR+=p.rating;}});
+    var area=(d.polygon[2][0]-d.polygon[0][0])*(d.polygon[2][1]-d.polygon[0][1]);
+    return {name:d.name,polygon:d.polygon,poiCount:count,exploreDensity:area>0?Math.round(count/area*10)/10:0,avgRating:count>0?Math.round(sumR/count*10)/10:0};
+  });
+}
+var districts = computeDistrictStats();
+
+/* ═══════════════════════════════════════════════════════════════
+   BASEMAP STYLES
+   ═══════════════════════════════════════════════════════════════ */
+var basemaps = {
+  amap:{version:8,sources:{amap:{type:'raster',tileSize:256,minzoom:0,maxzoom:18,attribution:'&copy; 高德地图',
+    tiles:['https://webrd01.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}','https://webrd02.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}','https://webrd03.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}','https://webrd04.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}']}},
+    layers:[{id:'bg',type:'background',paint:{'background-color':'#f5f0e8'}},{id:'amap-raster',type:'raster',source:'amap',paint:{'raster-opacity':1}}]},
+  'amap-sat':{version:8,sources:{amap_sat:{type:'raster',tileSize:256,minzoom:0,maxzoom:18,attribution:'&copy; 高德地图',
+    tiles:['https://webst01.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}','https://webst02.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}','https://webst03.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}','https://webst04.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}']}},
+    layers:[{id:'bg',type:'background',paint:{'background-color':'#1a2b3c'}},{id:'amap-sat-raster',type:'raster',source:'amap_sat',paint:{'raster-opacity':1}}]},
+  'amap-dark':{version:8,sources:{amap_dark:{type:'raster',tileSize:256,minzoom:0,maxzoom:18,attribution:'&copy; 高德地图',
+    tiles:['https://webrd01.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}','https://webrd02.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}','https://webrd03.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}','https://webrd04.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}']}},
+    layers:[{id:'bg',type:'background',paint:{'background-color':'#1a1a2e'}},{id:'amap-dark-raster',type:'raster',source:'amap_dark',paint:{'raster-opacity':1,'raster-brightness-min':0.2,'raster-brightness-max':0.55,'raster-contrast':0.6,'raster-saturation':0.4}}]}
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   STATE
+   ═══════════════════════════════════════════════════════════════ */
+var currentScheme='density',activeCat='all',buildingsOn=false,heightMult=1.0,gridStepVal=0.008;
+var poiOn=true,poiCluster=false,districtOn=false;
+var routeVisible={};routeData.forEach(function(r){routeVisible[r.name]=true;});
+var routeLabelOn=true;
+var zoneVisible={zone1:true,zone2:true,zone3:false};
+var SRC={district:'districts',poi:'footprints',route:'routes',zone:'activity-zones',building:'buildings-3d'};
+
+/* ═══════════════════════════════════════════════════════════════
+   MAP
+   ═══════════════════════════════════════════════════════════════ */
+var map = new maplibregl.Map({container:'map',style:basemaps.amap,center:[116.4074,39.93],zoom:10.2,pitch:0});
+map.addControl(new maplibregl.NavigationControl(),'top-right');
+map.addControl(new maplibregl.ScaleControl({unit:'metric'}),'bottom-left');
+
+/* ═══════════════════════════════════════════════════════════════
+   LAYER BUILDERS  (每个 add 函数先自清理再重建，幂等安全)
+   ═══════════════════════════════════════════════════════════════ */
+
+var catColors={'美食':'#ef4444','文化':'#8b5cf6','咖啡':'#f59e0b','户外':'#10b981','购物':'#ec4899'};
+var catIcons={'美食':'🍜','文化':'🏛️','咖啡':'☕','户外':'🌳','购物':'🛍️'};
+function filteredPois(){return activeCat==='all'?poiData:poiData.filter(function(p){return p.cat===activeCat;});}
+function poiGeoJSON(){return {type:'FeatureCollection',features:filteredPois().map(function(p){return {type:'Feature',geometry:{type:'Point',coordinates:[p.lng,p.lat]},properties:p};})};}
+
+function addPoiLayer(){
+  ['poi-cluster-count','poi-cluster','poi-unclustered'].forEach(function(id){if(map.getLayer(id))map.removeLayer(id);});
+  if(map.getSource(SRC.poi))map.removeSource(SRC.poi);
+  map.addSource(SRC.poi,{type:'geojson',data:poiGeoJSON(),cluster:poiCluster,clusterMaxZoom:14,clusterRadius:45});
+  map.addLayer({id:'poi-unclustered',type:'circle',source:SRC.poi,filter:['!',['has','point_count']],layout:{visibility:poiOn?'visible':'none'},paint:{'circle-radius':['interpolate',['linear'],['zoom'],9,4,14,8,18,14],'circle-color':['match',['get','cat'],'美食','#ef4444','文化','#8b5cf6','咖啡','#f59e0b','户外','#10b981','购物','#ec4899','#64748b'],'circle-stroke-color':'#fff','circle-stroke-width':1.5,'circle-opacity':0.9}});
+  map.addLayer({id:'poi-cluster',type:'circle',source:SRC.poi,filter:['has','point_count'],layout:{visibility:poiCluster?'visible':'none'},paint:{'circle-color':['step',['get','point_count'],'#fcd34d',10,'#f59e0b',25,'#d97706',50,'#b45309'],'circle-radius':['step',['get','point_count'],15,10,20,25,28,50,35],'circle-stroke-color':'#fff','circle-stroke-width':2,'circle-opacity':0.9}});
+  map.addLayer({id:'poi-cluster-count',type:'symbol',source:SRC.poi,filter:['has','point_count'],layout:{visibility:poiCluster?'visible':'none','text-field':['get','point_count_abbreviated'],'text-size':11},paint:{'text-color':'#fff'}});
+}
+function removePoiLayer(){['poi-cluster-count','poi-cluster','poi-unclustered'].forEach(function(id){if(map.getLayer(id))map.removeLayer(id);});if(map.getSource(SRC.poi))map.removeSource(SRC.poi);}
+function refreshPoiLayer(){removePoiLayer();addPoiLayer();renderLegend();}
+
+function routeGeoJSON(){return {type:'FeatureCollection',features:routeData.map(function(r){return {type:'Feature',geometry:{type:'LineString',coordinates:r.coords},properties:{name:r.name,color:r.color,dash:r.dash,desc:r.desc}};})};}
+function addRouteLayer(){
+  var ids=[];routeData.forEach(function(r){ids.push('route-'+r.name.replace(/[^a-zA-Z一-龥]/g,''));});ids.push('route-label');
+  ids.forEach(function(id){if(map.getLayer(id))map.removeLayer(id);});
+  if(map.getSource(SRC.route))map.removeSource(SRC.route);
+  map.addSource(SRC.route,{type:'geojson',data:routeGeoJSON()});
+  routeData.forEach(function(r){var lid='route-'+r.name.replace(/[^a-zA-Z一-龥]/g,'');map.addLayer({id:lid,type:'line',source:SRC.route,filter:['==',['get','name'],r.name],layout:{visibility:routeVisible[r.name]?'visible':'none'},paint:{'line-color':r.color,'line-width':['interpolate',['linear'],['zoom'],9,2,14,3.5,18,5],'line-dasharray':r.dash,'line-opacity':0.85}});});
+  map.addLayer({id:'route-label',type:'symbol',source:SRC.route,layout:{visibility:routeLabelOn?'visible':'none','text-field':['get','name'],'text-size':10,'text-allow-overlap':false,'symbol-placement':'line'},paint:{'text-color':'#1e293b','text-halo-color':'#fff','text-halo-width':2}});
+}
+function removeRouteLayer(){var ids=[];routeData.forEach(function(r){ids.push('route-'+r.name.replace(/[^a-zA-Z一-龥]/g,''));});ids.push('route-label');ids.forEach(function(id){if(map.getLayer(id))map.removeLayer(id);});if(map.getSource(SRC.route))map.removeSource(SRC.route);}
+
+function zoneGeoJSON(){return {type:'FeatureCollection',features:zoneData.map(function(z){return {type:'Feature',geometry:{type:'Polygon',coordinates:[circlePoly(z.cx,z.cy,z.r)]},properties:{name:z.name,id:z.id,color:z.color,desc:z.desc}};})};}
+function addZoneLayer(){
+  var ids=[];zoneData.forEach(function(z){ids.push('zone-'+z.id);ids.push('zone-line-'+z.id);});ids.push('zone-label');
+  ids.forEach(function(id){if(map.getLayer(id))map.removeLayer(id);});
+  if(map.getSource(SRC.zone))map.removeSource(SRC.zone);
+  map.addSource(SRC.zone,{type:'geojson',data:zoneGeoJSON()});
+  zoneData.forEach(function(z){map.addLayer({id:'zone-'+z.id,type:'fill',source:SRC.zone,filter:['==',['get','id'],z.id],layout:{visibility:zoneVisible[z.id]?'visible':'none'},paint:{'fill-color':z.color,'fill-opacity':0.12,'fill-outline-color':z.color}});map.addLayer({id:'zone-line-'+z.id,type:'line',source:SRC.zone,filter:['==',['get','id'],z.id],layout:{visibility:zoneVisible[z.id]?'visible':'none'},paint:{'line-color':z.color,'line-width':2,'line-dasharray':[4,3],'line-opacity':0.6}});});
+  map.addLayer({id:'zone-label',type:'symbol',source:SRC.zone,layout:{'text-field':['get','name'],'text-size':11,'text-allow-overlap':true,'text-anchor':'center'},paint:{'text-color':'#1e293b','text-halo-color':'#fff','text-halo-width':1.5}});
+}
+function removeZoneLayer(){var ids=[];zoneData.forEach(function(z){ids.push('zone-'+z.id);ids.push('zone-line-'+z.id);});ids.push('zone-label');ids.forEach(function(id){if(map.getLayer(id))map.removeLayer(id);});if(map.getSource(SRC.zone))map.removeSource(SRC.zone);}
+
+function districtGeoJSON(){return {type:'FeatureCollection',features:districts.map(function(d){var c=[(d.polygon[0][0]+d.polygon[2][0])/2,(d.polygon[0][1]+d.polygon[2][1])/2];return {type:'Feature',geometry:{type:'Polygon',coordinates:[d.polygon]},properties:{name:d.name,poiCount:d.poiCount,exploreDensity:d.exploreDensity,avgRating:d.avgRating,center_lng:c[0],center_lat:c[1]}};})};}
+function fillColorExpr(){if(currentScheme==='count')return['step',['get','poiCount'],'#fef3c7',3,'#fde68a',6,'#fbbf24',9,'#f59e0b',12,'#d97706'];if(currentScheme==='category')return['match',['get','name'],'东城','#8dd3c7','西城','#ffffb3','朝阳','#bebada','海淀','#fb8072','丰台','#80b1d3','石景山','#fdb462','通州','#b3de69','大兴','#fccde5','昌平','#bc80bd','顺义','#ffed6f','#d1d5db'];return['step',['get','exploreDensity'],'#fef3c7',5,'#fde68a',10,'#fbbf24',20,'#f59e0b',40,'#d97706'];}
+function addDistrictLayer(){
+  ['district-label','district-line','district-fill'].forEach(function(id){if(map.getLayer(id))map.removeLayer(id);});
+  if(map.getSource(SRC.district))map.removeSource(SRC.district);
+  map.addSource(SRC.district,{type:'geojson',data:districtGeoJSON()});
+  map.addLayer({id:'district-fill',type:'fill',source:SRC.district,layout:{visibility:districtOn?'visible':'none'},paint:{'fill-color':fillColorExpr(),'fill-opacity':buildingsOn?0.08:0.45,'fill-outline-color':'#fff'}});
+  map.addLayer({id:'district-line',type:'line',source:SRC.district,layout:{visibility:districtOn?'visible':'none'},paint:{'line-color':'#fff','line-width':1.8}});
+  map.addLayer({id:'district-label',type:'symbol',source:SRC.district,layout:{visibility:districtOn?'visible':'none','text-field':['get','name'],'text-size':11,'text-allow-overlap':true},paint:{'text-color':'#374151','text-halo-color':'#fff','text-halo-width':1.5}});
+}
+function removeDistrictLayer(){['district-label','district-line','district-fill'].forEach(function(id){if(map.getLayer(id))map.removeLayer(id);});if(map.getSource(SRC.district))map.removeSource(SRC.district);}
+function updateDistrictStyle(){if(map.getLayer('district-fill'))map.setPaintProperty('district-fill','fill-color',fillColorExpr());renderLegend();}
+
+function buildingsGeoJSON(){var step=gridStepVal,features=[];districts.forEach(function(d){var bb=d.polygon,minLng=bb[0][0],maxLng=bb[2][0],minLat=bb[0][1],maxLat=bb[2][1];var areaDeg=(maxLng-minLng)*(maxLat-minLat),densityF=d.poiCount/Math.max(areaDeg,0.001);for(var lng=minLng+step/2;lng<=maxLng;lng+=step){for(var lat=minLat+step/2;lat<=maxLat;lat+=step){if(Math.random()<0.28)continue;var inAny=false;for(var k=0;k<d.polygon.length-1;k++){if(pip([lng,lat],d.polygon)){inAny=true;break;}}if(!inAny)continue;var margin=step*0.12,gap=step-margin*2,bw=gap*(0.35+Math.random()*0.55),bh=gap*(0.35+Math.random()*0.55);var cx=lng+(Math.random()-0.5)*(gap-bw),cy=lat+(Math.random()-0.5)*(gap-bh);var h=Math.max(4,Math.min(380,Math.round((6+Math.min(densityF*0.7,200)*(0.5+Math.random()))*heightMult)));features.push({type:'Feature',geometry:{type:'Polygon',coordinates:[[[cx-bw/2,cy-bh/2],[cx+bw/2,cy-bh/2],[cx+bw/2,cy+bh/2],[cx-bw/2,cy+bh/2],[cx-bw/2,cy-bh/2]]]},properties:{height:h,district:d.name,poiCount:d.poiCount}});}}});return {type:'FeatureCollection',features:features};}
+function removeBuildingLayer(){['buildings-outline','buildings-extrusion'].forEach(function(id){if(map.getLayer(id))map.removeLayer(id);});if(map.getSource(SRC.building))map.removeSource(SRC.building);}
+function addBuildingLayer(){removeBuildingLayer();if(!buildingsOn)return;var geo=buildingsGeoJSON();map.addSource(SRC.building,{type:'geojson',data:geo});map.addLayer({id:'buildings-extrusion',type:'fill-extrusion',source:SRC.building,paint:{'fill-extrusion-color':['interpolate',['linear'],['get','height'],4,'#e8e0d8',15,'#d4c8b8',40,'#e8c070',80,'#e08850',150,'#d05030',250,'#a02030',380,'#601030'],'fill-extrusion-height':['get','height'],'fill-extrusion-base':0,'fill-extrusion-opacity':0.92,'fill-extrusion-vertical-gradient':true}});map.addLayer({id:'buildings-outline',type:'fill-extrusion',source:SRC.building,paint:{'fill-extrusion-color':['interpolate',['linear'],['get','height'],4,'#f0ebe4',80,'#f0c090',250,'#e08060',380,'#803030'],'fill-extrusion-height':['get','height'],'fill-extrusion-base':['-',['get','height'],0.5],'fill-extrusion-opacity':0.5}});}
+function rebuildBuildingLayer(){if(!buildingsOn)return;removeBuildingLayer();addBuildingLayer();renderLegend();}
+
+/* ═══════════════════════════════════════════════════════════════
+   LEGEND
+   ═══════════════════════════════════════════════════════════════ */
+var currentLegendMode='poi';
+function renderLegend(){
+  var el=document.getElementById('legend'),h='';
+  if(buildingsOn){currentLegendMode='building';h='<div class="title">建筑高度 · fill-extrusion</div>';[['#e8e0d8','0-15m'],['#d4c8b8','15-40m'],['#e8c070','40-80m'],['#e08850','80-150m'],['#d05030','150-250m'],['#601030','>250m']].forEach(function(r){h+='<div class="lr"><span class="sw" style="background:'+r[0]+'"></span>'+r[1]+'</div>';});el.innerHTML=h;return;}
+  if(districtOn){currentLegendMode='district';if(currentScheme==='category'){h='<div class="title">分类着色</div>';['东城','西城','朝阳','海淀','丰台'].forEach(function(n,i){h+='<div class="lr"><span class="sw" style="background:'+['#8dd3c7','#ffffb3','#bebada','#fb8072','#80b1d3'][i]+'"></span>'+n+'</div>';});el.innerHTML=h;return;}h='<div class="title">'+(currentScheme==='count'?'足迹数量':'探索密度')+'</div>';var c=['#fef3c7','#fde68a','#fbbf24','#f59e0b','#d97706'];var l=currentScheme==='count'?['<3','3-6','6-9','9-12','>12']:['<5','5-10','10-20','20-40','>40'];c.forEach(function(cl,i){h+='<div class="lr"><span class="sw" style="background:'+cl+'"></span>'+l[i]+'</div>';});el.innerHTML=h;return;}
+  currentLegendMode='poi';h='<div class="title">足迹分类</div>';Object.keys(catColors).forEach(function(cat){h+='<div class="lr"><span class="sw dot" style="background:'+catColors[cat]+'"></span>'+catIcons[cat]+' '+cat+' ('+poiData.filter(function(p){return p.cat===cat;}).length+')</div>';});h+='<div style="margin-top:6px;border-top:1px solid var(--border);padding-top:5px"><div class="title">探索路线</div></div>';routeData.forEach(function(r){h+='<div class="lr"><span class="sw line" style="background:'+r.color+'"></span>'+r.name+'</div>';});el.innerHTML=h;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   POPUPS & INTERACTION
+   ═══════════════════════════════════════════════════════════════ */
+function stars(n){var s='';for(var i=0;i<5;i++)s+=i<n?'★':'☆';return s;}
+function popupPoi(e){var f=e.features&&e.features[0];if(!f)return;var p=f.properties;new maplibregl.Popup({offset:10}).setLngLat(f.geometry.coordinates).setHTML('<span class="cat-tag" style="background:'+(catColors[p.cat]||'#ddd')+'20;color:'+(catColors[p.cat]||'#666')+'">'+catIcons[p.cat]+' '+p.cat+'</span><br><b>'+p.name+'</b><br><span class="stars">'+stars(p.rating)+'</span> '+p.rating+'/5<br>到访 '+p.visits+' 次 · '+p.note).addTo(map);}
+function popupRoute(e){var f=e.features&&e.features[0];if(!f)return;new maplibregl.Popup().setLngLat(e.lngLat).setHTML('<b>🛤️ '+f.properties.name+'</b><br>'+f.properties.desc).addTo(map);}
+function popupZone(e){var f=e.features&&e.features[0];if(!f)return;new maplibregl.Popup().setLngLat(e.lngLat).setHTML('<b>🎯 '+f.properties.name+'</b><br>'+f.properties.desc).addTo(map);}
+function popupDistrict(e){var f=e.features&&e.features[0];if(!f)return;var p=f.properties;new maplibregl.Popup().setLngLat(e.lngLat).setHTML('<b>'+p.name+'</b><br>足迹点数：'+p.poiCount+'<br>探索密度：'+p.exploreDensity+'<br>均分：'+p.avgRating+' / 5').addTo(map);}
+function popupBuilding(e){var f=e.features&&e.features[0];if(!f)return;var p=f.properties;new maplibregl.Popup({offset:[0,-p.height/2]}).setLngLat(e.lngLat).setHTML('<b>🏗️ '+p.district+'</b><br>建筑高度：'+p.height+' m<br>区域足迹：'+p.poiCount+' 个').addTo(map);}
+function expandCluster(e){var fs=map.queryRenderedFeatures(e.point,{layers:['poi-cluster']});if(!fs.length)return;map.getSource(SRC.poi).getClusterExpansionZoom(fs[0].properties.cluster_id,function(err,z){if(err)return;map.easeTo({center:fs[0].geometry.coordinates,zoom:z,duration:500});});}
+function pointer(){map.getCanvas().style.cursor='pointer';}
+function unpointer(){map.getCanvas().style.cursor='';}
+
+function rebuildAll(){
+  if(!map.isStyleLoaded())return;
+  removePoiLayer();removeRouteLayer();removeZoneLayer();removeDistrictLayer();removeBuildingLayer();
+  addPoiLayer();addRouteLayer();addZoneLayer();addDistrictLayer();
+  if(buildingsOn)addBuildingLayer();
+  renderLegend();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   EVENT WIRING
+   ═══════════════════════════════════════════════════════════════ */
+map.on('load',rebuildAll);
+map.on('style.load',rebuildAll);
+
+map.on('click','poi-unclustered',popupPoi);
+map.on('click','poi-cluster',expandCluster);
+map.on('click','district-fill',popupDistrict);
+map.on('click','buildings-extrusion',popupBuilding);
+['zone1','zone2','zone3'].forEach(function(zid){map.on('click','zone-'+zid,popupZone);});
+routeData.forEach(function(r){map.on('click','route-'+r.name.replace(/[^a-zA-Z一-龥]/g,''),popupRoute);});
+['poi-unclustered','poi-cluster','district-fill','buildings-extrusion'].forEach(function(id){map.on('mouseenter',id,pointer);map.on('mouseleave',id,unpointer);});
+
+map.on('mousemove',function(e){document.getElementById('coords').textContent=e.lngLat.lng.toFixed(5)+'°E  ·  '+e.lngLat.lat.toFixed(5)+'°N  ·  zoom '+map.getZoom().toFixed(1);});
+
+// Basemap
+document.querySelectorAll('#basemapGroup button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('#basemapGroup button').forEach(function(x){x.classList.remove('on');});this.classList.add('on');map.setStyle(basemaps[this.dataset.style]);});});
+
+// Category filter
+document.querySelectorAll('#catGroup button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('#catGroup button').forEach(function(x){x.classList.remove('on');});this.classList.add('on');activeCat=this.dataset.cat;refreshPoiLayer();});});
+
+// POI
+document.getElementById('togglePoi').addEventListener('change',function(){poiOn=this.checked;if(map.getLayer('poi-unclustered'))map.setLayoutProperty('poi-unclustered','visibility',poiOn?'visible':'none');});
+document.getElementById('togglePoiCluster').addEventListener('change',function(){poiCluster=this.checked;if(map.getLayer('poi-cluster'))map.setLayoutProperty('poi-cluster','visibility',poiCluster?'visible':'none');if(map.getLayer('poi-cluster-count'))map.setLayoutProperty('poi-cluster-count','visibility',poiCluster?'visible':'none');if(map.getLayer('poi-unclustered'))map.setLayoutProperty('poi-unclustered','visibility',poiCluster?'none':(poiOn?'visible':'none'));});
+
+// Routes
+var routeTogglesEl=document.getElementById('routeToggles');
+routeData.forEach(function(r){var id='route-'+r.name.replace(/[^a-zA-Z一-龥]/g,'');var lbl=document.createElement('label');lbl.className='toggle';var cb=document.createElement('input');cb.type='checkbox';cb.checked=true;cb.dataset.route=r.name;var track=document.createElement('i');track.className='toggle-track';lbl.appendChild(cb);lbl.appendChild(track);lbl.appendChild(document.createTextNode(r.name));routeTogglesEl.appendChild(lbl);cb.addEventListener('change',function(){routeVisible[r.name]=this.checked;if(map.getLayer(id))map.setLayoutProperty(id,'visibility',this.checked?'visible':'none');});});
+document.getElementById('toggleAllRoutes').addEventListener('change',function(){var vis=this.checked;routeTogglesEl.querySelectorAll('input').forEach(function(cb){cb.checked=vis;});routeData.forEach(function(r){routeVisible[r.name]=vis;var id='route-'+r.name.replace(/[^a-zA-Z一-龥]/g,'');if(map.getLayer(id))map.setLayoutProperty(id,'visibility',vis?'visible':'none');});});
+document.getElementById('toggleRouteLabel').addEventListener('change',function(){routeLabelOn=this.checked;if(map.getLayer('route-label'))map.setLayoutProperty('route-label','visibility',routeLabelOn?'visible':'none');});
+
+// Zones
+['zone1','zone2','zone3'].forEach(function(zid){document.getElementById('toggle'+zid.charAt(0).toUpperCase()+zid.slice(1)).addEventListener('change',function(){zoneVisible[zid]=this.checked;if(map.getLayer('zone-'+zid))map.setLayoutProperty('zone-'+zid,'visibility',this.checked?'visible':'none');if(map.getLayer('zone-line-'+zid))map.setLayoutProperty('zone-line-'+zid,'visibility',this.checked?'visible':'none');});});
+
+// District
+document.getElementById('toggleDistrict').addEventListener('change',function(){districtOn=this.checked;if(map.getLayer('district-fill'))map.setLayoutProperty('district-fill','visibility',districtOn?'visible':'none');if(map.getLayer('district-line'))map.setLayoutProperty('district-line','visibility',districtOn?'visible':'none');if(map.getLayer('district-label'))map.setLayoutProperty('district-label','visibility',districtOn?'visible':'none');currentLegendMode=districtOn?'district':'poi';renderLegend();});
+document.querySelectorAll('#schemeGroup button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('#schemeGroup button').forEach(function(x){x.classList.remove('on');});this.classList.add('on');currentScheme=this.dataset.scheme;updateDistrictStyle();});});
+
+// Buildings
+document.getElementById('toggleBuildings').addEventListener('change',function(){buildingsOn=this.checked;if(buildingsOn){map.easeTo({pitch:55,duration:800});addBuildingLayer();if(map.getLayer('district-fill'))map.setPaintProperty('district-fill','fill-opacity',0.08);if(map.getLayer('district-line'))map.setPaintProperty('district-line','line-color','rgba(255,255,255,0.4)');map.setLight({anchor:'viewport',color:'#fff',intensity:0.75,position:[1.15,210,50]});}else{map.easeTo({pitch:0,duration:600});removeBuildingLayer();if(map.getLayer('district-fill'))map.setPaintProperty('district-fill','fill-opacity',0.45);if(map.getLayer('district-line'))map.setPaintProperty('district-line','line-color','#fff');map.setLight({anchor:'viewport',color:'#fff',intensity:0.5,position:[1.15,90,30]});}renderLegend();});
+document.getElementById('heightMult').addEventListener('input',function(){heightMult=parseFloat(this.value);document.getElementById('heightVal').textContent=this.value+'×';rebuildBuildingLayer();});
+document.getElementById('gridStep').addEventListener('input',function(){gridStepVal=parseFloat(this.value);document.getElementById('gridVal').textContent=(gridStepVal<=0.005?'高':gridStepVal<=0.009?'中':'低')+' ('+gridStepVal.toFixed(3)+'°)';rebuildBuildingLayer();});
+document.getElementById('regenBuildings').addEventListener('click',rebuildBuildingLayer);
+document.getElementById('resetView').addEventListener('click',function(){map.easeTo({center:[116.4074,39.93],zoom:10.2,pitch:buildingsOn?55:0,bearing:0,duration:800});});
+
+renderLegend();
+window.mlMap=map;
+})();
+</script>
+</body>
+</html>
